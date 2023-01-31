@@ -36,7 +36,7 @@ for country in wealth_df["country"]:
     # country_array[0][country_array[0] < 0.0] = 0.0
 
     # simple estimate of wealth/area in USD/km^2
-    country_array *= wealth_df.loc[wealth_df["country"] == country, "wealth"]
+    country_array *= wealth_df.loc[wealth_df["country"] == country, "mean_wealth"]
     map_array += country_array
     print(country)
 
