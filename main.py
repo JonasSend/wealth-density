@@ -26,23 +26,23 @@ for i in range(len(old_names)):
 map_array = tif_file.read()
 map_array[0][map_array[0] > 0.0] = 0.0
 
+#
+# TODO revise
+#
 for country in wealth_df["country"]:
-    #
-    # TODO: revise does this work with lists?
-    #
     shape = [mapping(shape_df["geometry"][shape_df["ADMIN"] == country].iloc[0])]
     country_array, out_transform = mask(tif_file, shape, nodata=0)
-    map_array[0][map_array[0] < 0.0] = 0.0
-    #
-    # FIXME get country wealth data
-    #
-    wealth = 200000
-    country_array *= wealth
-    map_array += country_array
+    print(sum(sum(country_array[0] < 0)))
+    # country_array[0][country_array[0] < 0.0] = 0.0
 
-# - - -
+    # simple estimate of wealth/area in USD/km^2
+    country_array *= wealth_df.loc[wealth_df["country"] == country, "wealth"]
+    map_array += country_array
+    print(country)
+
+
 #
-# TODO revise from here
+# TODO revise
 #
 import numpy as np
 from matplotlib import cm
@@ -53,10 +53,10 @@ import matplotlib.colors as colors
 # different bounds
 our_cmap = cm.get_cmap('hot_r', 10)
 newcolors = our_cmap(np.linspace(0, 1, 10))
-background_colour = np.array([0.9882352941176471, 0.9647058823529412, 0.9607843137254902, 1.0])
+background_colour = np.array([0, 0, 1, .1])
 newcolors = np.vstack((background_colour, newcolors))
 our_cmap = ListedColormap(newcolors)
-bounds = [0.0, 1, 5, 10, 20, 50, 100, 200, 1000, 2000, 10000]
+bounds = [-200, -1, 5, 10, 20, 50, 100, 200, 1000, 2000, 10000]
 norm = colors.BoundaryNorm(bounds, our_cmap.N)
 
 # plot
