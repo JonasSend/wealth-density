@@ -1,32 +1,38 @@
 import rasterio
 import geopandas as gpd
+import pandas as pd
 from shapely.geometry import mapping
 from rasterio.mask import mask
 
 # downloaded from https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_MT_GLOBE_R2019A/ on 2023-01-23
 tif_file = rasterio.open('GHS_POP_E2015_GLOBE_R2019A_4326_30ss_V1_0.tif')
 
-# downloaded from https://www.naturalearthdata.com/ on 2023-01-23
-df = gpd.read_file('ne_10m_admin_0_countries.shp')
+# downloaded from https://www.naturalearthdata.com/downloads/ on 2023-01-23
+shape_df = gpd.read_file('ne_10m_admin_0_countries.shp')
 
-#
-# FIXME get wealth data 
-#
+# retrived from https://en.wikipedia.org/wiki/List_of_countries_by_wealth_per_adult on 2023-01-30
+# data based on https://www.credit-suisse.com/media/assets/corporate/docs/about-us/research/publications/global-wealth-databook-2022.pdf
+wealth_df = pd.read_csv("mean_wealth_per_country_2021.csv")
 
-#
-# FIXME country matching (?)
-#
+old_names = ['Bahamas', 'DR Congo', 'Congo', 'Czech Republic', 'Hong Kong',
+             'São Tomé and Príncipe', 'Serbia', 'Tanzania', 'United States']
+new_names = ['The Bahamas', 'Democratic Republic of the Congo', 'Republic of the Congo',
+             'Czechia', 'Hong Kong S.A.R.', 'São Tomé and Principe', 'Republic of Serbia',
+             'United Republic of Tanzania', 'United States of America']
+for i in range(len(old_names)):
+    wealth_df.loc[wealth_df["country"] == old_names[i], "country"] = new_names[i]
 
 # create "blank canvas"
 map_array = tif_file.read()
-map_array[0] = 0 
+map_array[0][map_array[0] > 0.0] = 0.0
 
-for country in df["ADMIN"]:
+for country in wealth_df["country"]:
     #
     # TODO: revise does this work with lists?
     #
-    shape = [mapping(df["geometry"][df["ADMIN"] == country].iloc[0])]
+    shape = [mapping(shape_df["geometry"][shape_df["ADMIN"] == country].iloc[0])]
     country_array, out_transform = mask(tif_file, shape, nodata=0)
+    map_array[0][map_array[0] < 0.0] = 0.0
     #
     # FIXME get country wealth data
     #
