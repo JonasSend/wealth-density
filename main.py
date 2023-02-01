@@ -17,10 +17,6 @@ data_path = "data"
 if not os.path.exists(data_path):
    os.makedirs(data_path)
 
-#
-# TODO consolidate quotes
-#
-
 # population density data
 url = "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_MT_GLOBE_R2019A/GHS_POP_E2015_GLOBE_R2019A_4326_30ss/V1-0/GHS_POP_E2015_GLOBE_R2019A_4326_30ss_V1_0.zip"
 response = requests.get(url)
