@@ -26,14 +26,9 @@ for i in range(len(old_names)):
 map_array = tif_file.read()
 map_array[0][map_array[0] > 0.0] = 0.0
 
-#
-# TODO revise
-#
 for country in wealth_df["country"]:
     shape = [mapping(shape_df["geometry"][shape_df["ADMIN"] == country].iloc[0])]
     country_array, out_transform = mask(tif_file, shape, nodata=0)
-    print(sum(sum(country_array[0] < 0)))
-    # country_array[0][country_array[0] < 0.0] = 0.0
 
     # simple estimate of wealth/area in USD/km^2
     country_array *= wealth_df.loc[wealth_df["country"] == country, "mean_wealth"]
@@ -42,7 +37,7 @@ for country in wealth_df["country"]:
 
 
 #
-# TODO revise
+# TODO: revise and organise imports
 #
 import numpy as np
 from matplotlib import cm
@@ -50,23 +45,24 @@ from matplotlib.colors import ListedColormap
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
-# different bounds
+map_values = np.concatenate(map_array[0], axis=0)
+map_values = map_values[map_values > 0]
+bounds = [-200, -1] + list(np.percentile(map_values, [25, 43, 57, 69, 79, 87, 93, 97, 99]))
+
 our_cmap = cm.get_cmap('hot_r', 10)
 newcolors = our_cmap(np.linspace(0, 1, 10))
-background_colour = np.array([0, 0, 1, .1])
+background_colour = np.array([0, 0, 0, 0])
 newcolors = np.vstack((background_colour, newcolors))
 our_cmap = ListedColormap(newcolors)
-bounds = [-200, -1, 5, 10, 20, 50, 100, 200, 1000, 2000, 10000]
 norm = colors.BoundaryNorm(bounds, our_cmap.N)
 
-# plot
-fig, ax = plt.subplots(facecolor='#FCF6F5FF')
-fig.set_size_inches(14, 7)
+#
+# TODO: choose background colour
+#
+fig, ax = plt.subplots(facecolor="#bcedff")
 ax.imshow(map_array[0], norm=norm, cmap=our_cmap)
 ax.axis('off')
-plt.show()
-
-
+plt.savefig('wealth_density.png', dpi=1000, bbox_inches="tight", pad_inches=0)
 
 
 
