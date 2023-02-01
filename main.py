@@ -69,11 +69,7 @@ def save_plot_map_array(_map_array: np.ndarray, image_name: str) -> None:
     our_cmap = ListedColormap(newcolors)
     norm = colors.BoundaryNorm(bounds, our_cmap.N)
 
-    #
-    # TODO: choose background colour
-    # light blue with red hue: #D5E9E8
-    #
-    fig, ax = plt.subplots(facecolor="#1e0f5a")
+    fig, ax = plt.subplots(facecolor="#D5E9E8")
     ax.imshow(_map_array[0], norm=norm, cmap=our_cmap)
     ax.axis("off")
     plt.savefig(image_name + ".png", dpi=1000, bbox_inches="tight", pad_inches=0)
@@ -99,6 +95,41 @@ save_plot_map_array(map_array_wealth, "wealth_density")
 #
 # TODO: transition animation etc.
 #
+
+# load both images
+
+
+from matplotlib import animation
+
+from PIL import Image
+
+image1 = np.array(Image.open('image1.png').convert('RGB'))
+image2 = np.array(Image.open('image2.png').convert('RGB'))
+
+fimage1 = image1.reshape((-1,3))
+fimage2 = image2.reshape((-1,3))
+
+def fade(image1, image2, weight_image2):
+    return (image1 * (1 - weight_image2)) + (image2 * weight_image2) # does this work?
+
+fig = plt.figure(figsize=(12, 10.8)) # Depends on aspect of your images
+ax = plt.axes()
+pic = ax.imshow(np.zeros(image1.shape)) # Create empty image of the same shape as image to plot
+frames = 90 # Number of frames to generate
+
+def init():
+    pic.set_array(np.zeros(image1.shape))
+    return [pic]
+
+# This funtion generates i-th frame.
+def animate(i):
+    pic.set_array(fade(image1.shape, fimage1, fimage2, i/frames))
+    return [pic]
+
+anim = animation.FuncAnimation(fig, animate, init_func=init,
+                               frames=frames, blit=True)
+
+anim.save('animaton.mp4', fps=30, extra_args=['-vcodec', 'libx264']) # save as GIF
 
 
 
