@@ -144,5 +144,5 @@ def calculate_weight(i):
         return 1 - (i - (long_segment * 2 + short_segment)) / short_segment
 
 
-anim = animation.FuncAnimation(fig, animate, frames=frames)
-anim.save('animaton.gif', fps=fps)
+population_wealth_animation = animation.FuncAnimation(fig, animate, frames=frames)
+population_wealth_animation.save('population_vs_wealth_density.gif', fps=fps)
