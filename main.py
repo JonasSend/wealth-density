@@ -41,6 +41,7 @@ shape_df = gpd.read_file(data_path + "/ne_10m_admin_0_countries.shp")
 # retrieved from https://en.wikipedia.org/wiki/List_of_countries_by_wealth_per_adult on 2023-01-30
 # data based on https://www.credit-suisse.com/media/assets/corporate/docs/about-us/research/publications/global-wealth-databook-2022.pdf
 wealth_df = pd.read_csv("mean_wealth_per_country_2021.csv")
+# change country names to match data
 old_names = ["Bahamas", "DR Congo", "Congo", "Czech Republic", "Hong Kong",
              "São Tomé and Príncipe", "Serbia", "Tanzania", "United States"]
 new_names = ["The Bahamas", "Democratic Republic of the Congo", "Republic of the Congo",
