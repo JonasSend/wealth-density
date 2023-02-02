@@ -71,28 +71,27 @@ def save_plot_map_array(_map_array: np.ndarray, image_name: str) -> None:
     plt.savefig(image_name + ".png", dpi=1000, bbox_inches="tight", pad_inches=0)
 
 
-map_array_population = tif_file.read()
-save_plot_map_array(map_array_population, "population_density")
+map_array = tif_file.read()
+save_plot_map_array(map_array, "population_density")
 
-map_array_wealth = map_array_population.copy()
-map_array_wealth[0][map_array_wealth[0] > 0.0] = 0.0  # create "blank canvas" for wealth density
+map_array[0][map_array[0] > 0.0] = 0.0  # create "blank canvas" for wealth density
 
 for country in wealth_df["country"]:
     shape = [mapping(shape_df["geometry"][shape_df["ADMIN"] == country].iloc[0])]
     country_array, out_transform = mask(tif_file, shape, nodata=0)
 
     # simple estimate of wealth/area in USD/km^2
-    country_array *= wealth_df.loc[wealth_df["country"] == country, "mean_wealth"]
-    map_array_wealth += country_array
+    country_array *= wealth_df.loc[wealth_df["country"] == country, "mean_wealth"].iloc[0]
+    map_array += country_array
     print(country)
 
-save_plot_map_array(map_array_wealth, "wealth_density")
+save_plot_map_array(map_array, "wealth_density")
 
 #
 # TODO: transition animation etc.
 #
 
-# load both images
+# load both images (delete arrays?)
 
 
 from matplotlib import animation
