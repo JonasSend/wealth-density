@@ -99,12 +99,12 @@ font = ImageFont.truetype("consola.ttf", 300)
 
 population_image = Image.open('population_density.png')
 image_draw = ImageDraw.Draw(population_image)
-image_draw.text((1600, 1700), "population", font=font, fill=(0, 0, 0))
+image_draw.text((1600, 1800), "population", font=font, fill=(0, 0, 0))
 population_image_array = np.array(population_image.convert('RGB'))
 
 wealth_image = Image.open('wealth_density.png')
 image_draw = ImageDraw.Draw(wealth_image)
-image_draw.text((1850, 1700), "wealth", font=font, fill=(0, 0, 0))
+image_draw.text((1850, 1800), "wealth", font=font, fill=(0, 0, 0))
 wealth_image_array = np.array(wealth_image.convert('RGB'))
 
 image_shape = population_image_array.shape
