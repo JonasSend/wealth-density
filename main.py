@@ -26,12 +26,12 @@ response = requests.get(url)
 open("data/population_density.zip", "wb").write(response.content)
 with zipfile.ZipFile(data_path + "/population_density.zip", "r") as zip_file:
     zip_file.extractall(data_path)
-tif_file = rasterio.open(data_path + "/GHS_POP_E2015_GLOBE_R2019A_4326_30ss_V1_0.tif")  # population density raster
+population_density_raster = rasterio.open(data_path + "/GHS_POP_E2015_GLOBE_R2019A_4326_30ss_V1_0.tif")
 
 
-headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0"}  # fake a user agent
+fake_user_agent = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0"}
 url = "https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_0_countries.zip"
-response = requests.get(url, headers=headers)
+response = requests.get(url, headers=fake_user_agent)
 open(data_path + "/country_shapes.zip", "wb").write(response.content)
 with zipfile.ZipFile(data_path + "/country_shapes.zip", "r") as zip_file:
     zip_file.extractall(data_path)
@@ -71,7 +71,7 @@ def save_plot_map_array(_map_array: np.ndarray, image_name: str) -> None:
     plt.savefig(image_name + ".png", dpi=1000, bbox_inches="tight", pad_inches=0)
 
 
-map_array = tif_file.read()
+map_array = population_density_raster.read()
 save_plot_map_array(map_array, "population_density")
 
 
@@ -79,11 +79,12 @@ save_plot_map_array(map_array, "population_density")
 # this gives a simple estimate of wealth/area in USD/km^2
 # no data is treated as no wealth
 
-map_array[0][map_array[0] > 0.0] = 0.0  # create "blank canvas" for wealth density
+# create "blank canvas" for wealth density
+map_array[0][map_array[0] > 0.0] = 0.0
 
 for country in wealth_df["country"]:
     shape = [mapping(shape_df["geometry"][shape_df["ADMIN"] == country].iloc[0])]
-    country_array, out_transform = mask(tif_file, shape, nodata=0)
+    country_array, out_transform = mask(population_density_raster, shape, nodata=0)
 
     country_array *= wealth_df.loc[wealth_df["country"] == country, "mean_wealth"].iloc[0]
     map_array += country_array
@@ -120,11 +121,11 @@ fps = 25
 frames = fps * 5
 
 
+# use empty image and fill with content for each frame
 def animate(i):
     weight_wealth = calculate_weight(i)
-    image = ax.imshow(np.zeros(image_shape))
-    image.set_array(fade(population_image_flat_array, wealth_image_flat_array, weight_wealth).reshape(image_shape))
-    return [image]
+    empty_image.set_array(fade(population_image_flat_array, wealth_image_flat_array, weight_wealth).reshape(image_shape))
+    return [empty_image]
 
 
 def fade(flat_image_1, flat_image_2, weight_image_2):
