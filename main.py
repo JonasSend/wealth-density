@@ -50,7 +50,7 @@ for i in range(len(old_names)):
 
 # save raster data as images #
 
-def save_plot_map_array(_map_array: np.ndarray, image_name: str) -> None:
+def save_as_map(_map_array: np.ndarray, image_name: str) -> None:
     map_values = np.concatenate(_map_array[0], axis=0)
     map_values = map_values[map_values > 0]
     # boundaries arbitrary - chosen for nice visual apearance
@@ -70,7 +70,7 @@ def save_plot_map_array(_map_array: np.ndarray, image_name: str) -> None:
 
 
 map_array = population_density_raster.read()
-save_plot_map_array(map_array, "population_density")
+save_as_map(map_array, "population_density")
 
 # for wealth data, multiply population data by wealth per capita
 # this gives a simple estimate of wealth/area in USD/km^2
@@ -93,7 +93,7 @@ for country in shape_df["ADMIN"]:
     map_array += country_array
     print(country)
 
-save_plot_map_array(map_array, "wealth_density")
+save_as_map(map_array, "wealth_density")
 
 
 # load both images and generate loop GIF that transitions between them #
