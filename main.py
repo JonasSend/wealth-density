@@ -99,24 +99,33 @@ save_as_map(map_array, "wealth_density")
 # load both images and generate loop GIF that transitions between them #
 
 font = ImageFont.truetype("segoeui.ttf", 150)
+font_signature = ImageFont.truetype("segoeui.ttf", 50)
 # font colour: median colour of the plot's colour palette
 font_colour = (255, 156, 28)
 text_position = (250, 1900)
+text_position_signature = (4200, 2006) 
 
 # it makes sense to manually adjust a few colour "anomalies" in the population density map before loading
 # a bit hacky: create the image with and without text to let text fade in and out
 
 population_image = Image.open('population_density.png')
+image_draw = ImageDraw.Draw(population_image)
+image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
 population_image_with_text = population_image.copy()
 image_draw = ImageDraw.Draw(population_image_with_text)
 image_draw.text(text_position, "Population", font=font, fill=font_colour)
+image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
+population_image_with_text.show()
 population_image_array = np.array(population_image.convert('RGB'))
 population_image_with_text_array = np.array(population_image_with_text.convert('RGB'))
 
 wealth_image = Image.open('wealth_density.png')
+image_draw = ImageDraw.Draw(wealth_image)
+image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
 wealth_image_with_text = wealth_image.copy()
 image_draw = ImageDraw.Draw(wealth_image_with_text)
 image_draw.text(text_position, "Wealth", font=font, fill=font_colour)
+image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
 wealth_image_array = np.array(wealth_image.convert('RGB'))
 wealth_image_with_text_array = np.array(wealth_image_with_text.convert('RGB'))
 
@@ -133,11 +142,10 @@ fig = plt.figure(dpi=600, frameon=False)
 ax = plt.axes()
 ax.axis("off")
 empty_image = ax.imshow(np.zeros(image_shape))
-fps = 5
-# show each image for 1.5 seconds and use 1 second for transition between the two
-frames = fps * 5
-short_segment = round(frames * 1.5 / 5)
-long_segment = round(frames / 5)
+fps = 20
+# show each image for 2 seconds and use 1 second for transition between the two
+frames = fps * 6
+long_segment = fps * 2
 
 
 def animate(_i: int) -> AxesImage:
@@ -146,31 +154,23 @@ def animate(_i: int) -> AxesImage:
     """
     if _i <= long_segment:
         empty_image.set_array(population_image_with_text_flat_array.reshape(image_shape))
-    elif _i <= round(short_segment / 2) + long_segment:
-        empty_image.set_array(
-            fade(population_image_with_text_flat_array, 1 - (2 * (_i - long_segment) / short_segment)).reshape(
-                image_shape))
-    elif _i <= short_segment + long_segment:
-        empty_image.set_array(
-            fade(wealth_image_with_text_flat_array, (2 * (_i - long_segment) / short_segment) - 1).reshape(image_shape))
-    elif _i <= long_segment * 2 + short_segment:
+    elif _i <= round(fps / 2) + long_segment:
+        empty_image.set_array(fade(population_image_with_text_flat_array, 1 - (2 * (_i - long_segment) / fps)).reshape(image_shape))
+    elif _i <= fps + long_segment:
+        empty_image.set_array(fade(wealth_image_with_text_flat_array, (2 * (_i - long_segment) / fps) - 1).reshape(image_shape))
+    elif _i <= long_segment * 2 + fps:
         empty_image.set_array(wealth_image_with_text_flat_array.reshape(image_shape))
-    elif _i <= round(short_segment / 2) + long_segment * 2 + short_segment:
-        empty_image.set_array(fade(wealth_image_with_text_flat_array,
-                                   1 - (2 * (_i - (long_segment * 2 + short_segment)) / short_segment)).reshape(
-            image_shape))
+    elif _i <= round(fps / 2) + long_segment * 2 + fps:
+        empty_image.set_array(fade(wealth_image_with_text_flat_array, 1 - (2 * (_i - (long_segment * 2 + fps)) / fps)).reshape(image_shape))
     else:
-        empty_image.set_array(fade(population_image_with_text_flat_array,
-                                   (2 * (_i - (long_segment * 2 + short_segment)) / short_segment) - 1).reshape(
-            image_shape))
+        empty_image.set_array(fade(population_image_with_text_flat_array, (2 * (_i - (long_segment * 2 + fps)) / fps) - 1).reshape(image_shape))
     return [empty_image]
 
 
 def fade(image_flat_array: np.ndarray, weight_image: float) -> np.ndarray:
     """mix image with text with a 50/50 mix of population and wealth images without text"""
-    weight_other_images = (1 - weight_image)
-    faded_image = (image_flat_array * weight_image) + (
-                (population_image_flat_array + wealth_image_flat_array) * weight_other_images)
+    weight_other_images = (1 - weight_image) / 2
+    faded_image = (image_flat_array * weight_image) + (population_image_flat_array * weight_other_images) + (wealth_image_flat_array* weight_other_images)
     return faded_image.astype(int)
 
 
