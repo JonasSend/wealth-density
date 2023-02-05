@@ -115,7 +115,6 @@ population_image_with_text = population_image.copy()
 image_draw = ImageDraw.Draw(population_image_with_text)
 image_draw.text(text_position, "Population", font=font, fill=font_colour)
 image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
-population_image_with_text.show()
 population_image_array = np.array(population_image.convert('RGB'))
 population_image_with_text_array = np.array(population_image_with_text.convert('RGB'))
 
