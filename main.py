@@ -74,6 +74,8 @@ save_as_map(map_array, "population_density")
 
 # for wealth data, multiply population data by wealth per capita
 # this gives a simple estimate of wealth/area in USD/km^2
+# (since data on wealth per capita is restricted to adults, this approach overestimates
+# the relative wealth density of "young" (and thus usually poor) countries)
 # replace no data with median
 
 # create "blank canvas" for wealth density
