@@ -13,19 +13,21 @@ from matplotlib.colors import ListedColormap
 from matplotlib.image import AxesImage
 from shapely.geometry import mapping
 from PIL import Image, ImageDraw, ImageFont
+from PIL.PngImagePlugin import PngImageFile
 
-# download data, unzip, and load into workspace #
+
+""" download data, unzip, and load into workspace """
 
 data_path = "data"
 if not os.path.exists(data_path):
     os.makedirs(data_path)
 
-url = "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_MT_GLOBE_R2019A/GHS_POP_E2015_GLOBE_R2019A_4326_30ss/V1-0/GHS_POP_E2015_GLOBE_R2019A_4326_30ss_V1_0.zip"
+url = "http://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E2020_GLOBE_R2023A_4326_30ss/V1-0/GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.zip"
 response = requests.get(url)
 open("data/population_density.zip", "wb").write(response.content)
 with zipfile.ZipFile(data_path + "/population_density.zip", "r") as zip_file:
     zip_file.extractall(data_path)
-population_density_raster = rasterio.open(data_path + "/GHS_POP_E2015_GLOBE_R2019A_4326_30ss_V1_0.tif")
+population_density_raster = rasterio.open(data_path + "/GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif")
 
 fake_user_agent = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0"}
 url = "https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_0_countries.zip"
@@ -48,7 +50,8 @@ for i in range(len(old_names)):
     wealth_df.loc[wealth_df["country"] == old_names[i], "country"] = new_names[i]
 
 
-# save raster data as images #
+""" save raster data as images """
+
 
 def save_as_map(_map_array: np.ndarray, image_name: str) -> None:
     map_values = np.concatenate(_map_array[0], axis=0)
@@ -98,37 +101,48 @@ for country in shape_df["ADMIN"]:
 save_as_map(map_array, "wealth_density")
 
 
-# load both images and generate loop GIF that transitions between them #
+""" load both images and generate loop GIF that transitions between them """
 
-font = ImageFont.truetype("segoeui.ttf", 150)
-font_signature = ImageFont.truetype("segoeui.ttf", 50)
+font = ImageFont.truetype("Tahoma.ttf", 150)
+font_signature = ImageFont.truetype("Tahoma.ttf", 50)
 # font colour: median colour of the plot's colour palette
 font_colour = (255, 156, 28)
 text_position = (250, 1900)
 text_position_signature = (4200, 2006) 
 
 # it makes sense to manually adjust a few colour "anomalies" in the population density map before loading
-# a bit hacky: create the image with and without text to let text fade in and out
+# create the image with and without text to let text fade in and out
+
+
+def add_signature(_image_draw: ImageDraw.ImageDraw) -> None:
+    _image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
+    
+    
+def convert_to_rgb_array(_image: PngImageFile) -> np.ndarray:
+    return np.array(_image.convert('RGB'))
+
 
 population_image = Image.open('population_density.png')
 image_draw = ImageDraw.Draw(population_image)
-image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
+add_signature(image_draw)
+population_image_array = convert_to_rgb_array(population_image)
+
 population_image_with_text = population_image.copy()
 image_draw = ImageDraw.Draw(population_image_with_text)
 image_draw.text(text_position, "Population", font=font, fill=font_colour)
-image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
-population_image_array = np.array(population_image.convert('RGB'))
-population_image_with_text_array = np.array(population_image_with_text.convert('RGB'))
+add_signature(image_draw)
+population_image_with_text_array = convert_to_rgb_array(population_image_with_text)
 
 wealth_image = Image.open('wealth_density.png')
 image_draw = ImageDraw.Draw(wealth_image)
-image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
+add_signature(image_draw)
+wealth_image_array = convert_to_rgb_array(wealth_image)
+
 wealth_image_with_text = wealth_image.copy()
 image_draw = ImageDraw.Draw(wealth_image_with_text)
 image_draw.text(text_position, "Wealth", font=font, fill=font_colour)
-image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
-wealth_image_array = np.array(wealth_image.convert('RGB'))
-wealth_image_with_text_array = np.array(wealth_image_with_text.convert('RGB'))
+add_signature(image_draw)
+wealth_image_with_text_array = convert_to_rgb_array(wealth_image_with_text)
 
 image_shape = population_image_array.shape
 
@@ -139,39 +153,45 @@ wealth_image_flat_array = wealth_image_array.reshape((-1, 3))
 wealth_image_with_text_flat_array = wealth_image_with_text_array.reshape((-1, 3))
 
 # set up images for animation
-fig = plt.figure(dpi=600, frameon=False)
+fig = plt.figure(dpi=500, figsize=[4.041720990873533, 2], frameon=False) # hacky: adjusted to image size
+fig.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=None, hspace=None) # no white borders
 ax = plt.axes()
 ax.axis("off")
-empty_image = ax.imshow(np.zeros(image_shape))
+image = ax.imshow(np.zeros(image_shape))
 fps = 20
 # show each image for 2 seconds and use 1 second for transition between the two
 frames = fps * 6
-long_segment = fps * 2
+frames_long_segment = fps * 2
 
 
 def animate(_i: int) -> AxesImage:
-    """use empty image and fill with content for each frame
+    """fill image with content for each frame
     hacky if-else clause to determine which images are used for fade-ins and -outs
     """
-    if _i <= long_segment:
-        empty_image.set_array(population_image_with_text_flat_array.reshape(image_shape))
-    elif _i <= round(fps / 2) + long_segment:
-        empty_image.set_array(fade(population_image_with_text_flat_array, 1 - (2 * (_i - long_segment) / fps)).reshape(image_shape))
-    elif _i <= fps + long_segment:
-        empty_image.set_array(fade(wealth_image_with_text_flat_array, (2 * (_i - long_segment) / fps) - 1).reshape(image_shape))
-    elif _i <= long_segment * 2 + fps:
-        empty_image.set_array(wealth_image_with_text_flat_array.reshape(image_shape))
-    elif _i <= round(fps / 2) + long_segment * 2 + fps:
-        empty_image.set_array(fade(wealth_image_with_text_flat_array, 1 - (2 * (_i - (long_segment * 2 + fps)) / fps)).reshape(image_shape))
+    if _i <= frames_long_segment:
+        set_image(population_image_with_text_flat_array)
+    elif _i <= round(fps / 2) + frames_long_segment:
+        set_image(fade(population_image_with_text_flat_array, 1 - (2 * (_i - frames_long_segment) / fps)))
+    elif _i <= fps + frames_long_segment:
+        set_image(fade(wealth_image_with_text_flat_array, (2 * (_i - frames_long_segment) / fps) - 1))
+    elif _i <= frames_long_segment * 2 + fps:
+        set_image(wealth_image_with_text_flat_array)
+    elif _i <= round(fps / 2) + frames_long_segment * 2 + fps:
+        set_image(fade(wealth_image_with_text_flat_array, 1 - (2 * (_i - (frames_long_segment * 2 + fps)) / fps)))
     else:
-        empty_image.set_array(fade(population_image_with_text_flat_array, (2 * (_i - (long_segment * 2 + fps)) / fps) - 1).reshape(image_shape))
-    return [empty_image]
+        set_image(fade(population_image_with_text_flat_array, (2 * (_i - (frames_long_segment * 2 + fps)) / fps) - 1))
+    return [image]
+
+
+def set_image(image_flat_array: np.ndarray) -> np.ndarray:
+    image.set_array(image_flat_array.reshape(image_shape))
 
 
 def fade(image_flat_array: np.ndarray, weight_image: float) -> np.ndarray:
     """mix image with text with a 50/50 mix of population and wealth images without text"""
     weight_other_images = (1 - weight_image) / 2
-    faded_image = (image_flat_array * weight_image) + (population_image_flat_array * weight_other_images) + (wealth_image_flat_array* weight_other_images)
+    faded_image = ((image_flat_array * weight_image) + (population_image_flat_array * weight_other_images)
+                   + (wealth_image_flat_array* weight_other_images))
     return faded_image.astype(int)
 
 
