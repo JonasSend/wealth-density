@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-from matplotlib import cm, animation
+from matplotlib import colormaps, animation
 from matplotlib.colors import ListedColormap
 from matplotlib.image import AxesImage
 from shapely.geometry import mapping
@@ -59,15 +59,14 @@ def save_as_map(_map_array: np.ndarray, image_name: str) -> None:
     # boundaries arbitrary - chosen for nice visual apearance
     bounds = [-200, -1] + list(np.percentile(map_values, [25, 43, 57, 69, 79, 87, 93, 97, 99]))
 
-    our_cmap = cm.get_cmap("afmhot", 10)
-    newcolors = our_cmap(np.linspace(0, 1, 10))
+    newcolors = colormaps["afmhot"](np.linspace(0, 1, 10))
     background_colour = np.array([0, 0, 0, 0])
     newcolors = np.vstack((background_colour, newcolors))
-    our_cmap = ListedColormap(newcolors)
-    norm = colors.BoundaryNorm(bounds, our_cmap.N)
+    colour_map = ListedColormap(newcolors)
+    norm = colors.BoundaryNorm(bounds, colour_map.N)
 
     _fig, _ax = plt.subplots(facecolor="#000000")
-    _ax.imshow(_map_array[0], norm=norm, cmap=our_cmap)
+    _ax.imshow(_map_array[0], norm=norm, cmap=colour_map)
     _ax.axis("off")
     plt.savefig(image_name + ".png", dpi=1000, bbox_inches="tight", pad_inches=0)
 
@@ -110,9 +109,6 @@ font_colour = (255, 156, 28)
 text_position = (250, 1900)
 text_position_signature = (4200, 2006) 
 
-# it makes sense to manually adjust a few colour "anomalies" in the population density map before loading
-# create the image with and without text to let text fade in and out
-
 
 def add_signature(_image_draw: ImageDraw.ImageDraw) -> None:
     _image_draw.text(text_position_signature, "Jonas Send", font=font_signature, fill=font_colour)
@@ -122,6 +118,7 @@ def convert_to_rgb_array(_image: PngImageFile) -> np.ndarray:
     return np.array(_image.convert('RGB'))
 
 
+# create the images with and without text to let text fade in and out
 population_image = Image.open('population_density.png')
 image_draw = ImageDraw.Draw(population_image)
 add_signature(image_draw)
@@ -153,7 +150,7 @@ wealth_image_flat_array = wealth_image_array.reshape((-1, 3))
 wealth_image_with_text_flat_array = wealth_image_with_text_array.reshape((-1, 3))
 
 # set up images for animation
-fig = plt.figure(dpi=500, figsize=[4.041720990873533, 2], frameon=False) # hacky: adjusted to image size
+fig = plt.figure(dpi=500, figsize=[5.052151238591917, 2.5], frameon=False) # hacky: adjusted to image size
 fig.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=None, hspace=None) # no white borders
 ax = plt.axes()
 ax.axis("off")
