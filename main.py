@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 from PIL.PngImagePlugin import PngImageFile
 
 
-""" download data, unzip, and load into workspace """
+""" download and process data """
 
 data_path = "data"
 if not os.path.exists(data_path):
@@ -29,6 +29,22 @@ with zipfile.ZipFile(data_path + "/population_density.zip", "r") as zip_file:
     zip_file.extractall(data_path)
 population_density_raster = rasterio.open(data_path + "/GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif")
 
+url = "https://api.worldbank.org/v2/en/indicator/SP.POP.TOTL?downloadformat=excel"
+response = requests.get(url)
+open(data_path + "/population.xls", "wb").write(response.content)
+population_df = pd.read_excel(data_path + "/population.xls", sheet_name=0, skiprows=3, engine='xlrd')
+population_df = population_df[["Country Code", "2022"]]
+population_df = population_df.rename(columns={"Country Code": "country_code", "2022": "population"})
+
+# total welath by country in million USD
+# retrieved from https://en.wikipedia.org/wiki/List_of_countries_by_wealth_per_adult on 2023-08-12
+# data based on https://www.credit-suisse.com/media/assets/corporate/docs/about-us/research/publications/global-wealth-databook-2022.pdf
+wealth_df = pd.read_csv("wealth_2021.csv")
+
+# get wealth per capita in USD
+wealth_df = wealth_df.merge(population_df, on="country_code")
+wealth_df["wealth_per_capita"] = wealth_df["wealth"] / wealth_df["population"] * 1000000
+
 fake_user_agent = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0"}
 url = "https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_0_countries.zip"
 response = requests.get(url, headers=fake_user_agent)
@@ -36,18 +52,6 @@ open(data_path + "/country_shapes.zip", "wb").write(response.content)
 with zipfile.ZipFile(data_path + "/country_shapes.zip", "r") as zip_file:
     zip_file.extractall(data_path)
 shape_df = gpd.read_file(data_path + "/ne_10m_admin_0_countries.shp")
-
-# retrieved from https://en.wikipedia.org/wiki/List_of_countries_by_wealth_per_adult on 2023-01-30
-# data based on https://www.credit-suisse.com/media/assets/corporate/docs/about-us/research/publications/global-wealth-databook-2022.pdf
-wealth_df = pd.read_csv("mean_wealth_per_country_2021.csv")
-# change country names to match data
-old_names = ["Bahamas", "DR Congo", "Congo", "Czech Republic", "Hong Kong",
-             "São Tomé and Príncipe", "Serbia", "Tanzania", "United States"]
-new_names = ["The Bahamas", "Democratic Republic of the Congo", "Republic of the Congo",
-             "Czechia", "Hong Kong S.A.R.", "São Tomé and Principe", "Republic of Serbia",
-             "United Republic of Tanzania", "United States of America"]
-for i in range(len(old_names)):
-    wealth_df.loc[wealth_df["country"] == old_names[i], "country"] = new_names[i]
 
 
 """ save raster data as images """
@@ -76,26 +80,24 @@ save_as_map(map_array, "population_density")
 
 # for wealth data, multiply population data by wealth per capita
 # this gives a simple estimate of wealth/area in USD/km^2
-# (since data on wealth per capita is restricted to adults, this approach overestimates
-# the relative wealth density of "young" (and thus usually poor) countries)
 # replace no data with median
 
 # create "blank canvas" for wealth density
 map_array[0][map_array[0] > 0.0] = 0.0
-median_wealth = wealth_df["mean_wealth"].median()
+median_wealth = wealth_df["wealth_per_capita"].median()
 
-for country in shape_df["ADMIN"]:
-    shape = [mapping(shape_df["geometry"][shape_df["ADMIN"] == country].iloc[0])]
+for code in shape_df["ADM0_A3"]:
+    shape = [mapping(shape_df["geometry"][shape_df["ADM0_A3"] == code].iloc[0])]
     country_array, out_transform = mask(population_density_raster, shape, nodata=0)
 
-    country_wealth = wealth_df.loc[wealth_df["country"] == country, "mean_wealth"]
+    country_wealth = wealth_df.loc[wealth_df["country_code"] == code, "wealth_per_capita"]
     if len(country_wealth) == 0:
         country_wealth = median_wealth
     else:
         country_wealth = country_wealth.iloc[0]
     country_array *= country_wealth
     map_array += country_array
-    print(country)
+    print(code)
 
 save_as_map(map_array, "wealth_density")
 
